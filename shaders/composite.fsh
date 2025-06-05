@@ -12,8 +12,10 @@ uniform sampler2D colortex2; // encoded surface normals
 
 uniform vec3 shadowLightPosition;
 
+// these variables were provided by Iris/OptiFine and aren't standard GL variables
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferProjectionInverse;
+
 uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 
@@ -56,6 +58,9 @@ void main() {
   vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
   vec3 shadowViewPos = (shadowModelView * vec4(feetPlayerPos, 1.0)).xyz;
   vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
+  // avoid `shadow acne` by `biasing` the shadow position,
+  // see https://computergraphics.stackexchange.com/questions/2192/cause-of-shadow-acne/2193
+  shadowClipPos -= 0.001;
   vec3 shadowNDCPos = shadowClipPos.xyz / shadowClipPos.w;
   vec3 shadowScreenPos = shadowNDCPos * 0.5 + 0.5;
   
