@@ -5,7 +5,7 @@ uniform sampler2D gtexture;
 in vec2 texcoord;
 in vec4 glcolor;
 
-
+// const int shadowMapResolution = 2048; // simple way to make shadow sharper, but can cause performance issues
 layout(location = 0) out vec4 color;
 
 void main() {

@@ -1,5 +1,7 @@
 #version 330 compatibility
 
+#include "/lib/distort.glsl"
+
 // constant variables which was defined by developer(we)
 const vec3 blocklightColor = vec3(1.0, 0.5, 0.08);
 const vec3 skylightColor = vec3(0.05, 0.15, 0.3);
@@ -61,6 +63,7 @@ void main() {
   // avoid `shadow acne` by `biasing` the shadow position,
   // see https://computergraphics.stackexchange.com/questions/2192/cause-of-shadow-acne/2193
   shadowClipPos -= 0.001;
+  shadowClipPos.xyz = distortShadowClipPos(shadowClipPos.xyz); // distortion
   vec3 shadowNDCPos = shadowClipPos.xyz / shadowClipPos.w;
   vec3 shadowScreenPos = shadowNDCPos * 0.5 + 0.5;
   
