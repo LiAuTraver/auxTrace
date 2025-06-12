@@ -21,7 +21,9 @@ uniform mat4 gbufferProjectionInverse;
 uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 
-uniform sampler2D shadowtex0;
+uniform sampler2D shadowtex0; // everything that casts shadows
+uniform sampler2D shadowtex1; // only opaque stuff that casts shadows
+uniform sampler2D shadowcolor0; // color and alpha of the shadow caster
 
 uniform sampler2D depthtex0;
 
@@ -38,9 +40,38 @@ vec3 projectAndDivide(mat4 projMat, vec3 pos){
   return homePos.xyz / homePos.w;
 }
 
+vec3 getShadow(vec3 shadowScreenPos){
+  // sample the shadow map containing everything
+  float transparentShadow = step(shadowScreenPos.z, texture(shadowtex0, shadowScreenPos.xy).r);
+
+  // a value of 1.0 means 100% of sunlight is getting through, not 100% shadowing
+  if(transparentShadow == 1.0){
+    // no shadow at all, return full sunlight
+    return vec3(1.0);
+  }
+
+  float opaqueShadow = step(shadowScreenPos.z, texture(shadowtex1, shadowScreenPos.xy).r); // sample the shadow map containing only opaque stuff
+
+  if(opaqueShadow == 0.0){
+    // there is a shadow cast by something opaque, return no sunlight
+    return vec3(0.0);
+  }
+
+  // contains the color and alpha (transparency) of the thing casting a shadow
+  vec4 shadowColor = texture(shadowcolor0, shadowScreenPos.xy);
+
+
+  /*
+  use 1 - the alpha to get how much light is let through
+  and multiply that light by the color of the caster
+  */
+  return shadowColor.rgb * (1.0 - shadowColor.a);
+}
+
 void main() {
 	color = texture(colortex0, texcoord);
-  color.rgb = pow(color.rgb, vec3(2.2)); // gamma correction, revert it in `final.fsh/vsh`
+  // gamma correction, revert it in `final.fsh/vsh`
+  color.rgb = pow(color.rgb, vec3(2.2));
 	
   vec2 lightmap = texture(colortex1,texcoord).rg; // block light in red channel, skylight in green channel
   vec3 encodedNormal = texture(colortex2,texcoord).rgb;
@@ -67,7 +98,8 @@ void main() {
   vec3 shadowNDCPos = shadowClipPos.xyz / shadowClipPos.w;
   vec3 shadowScreenPos = shadowNDCPos * 0.5 + 0.5;
   
-  float shadow = step(shadowScreenPos.z, texture(shadowtex0, shadowScreenPos.xy).r);
+  // float shadow = step(shadowScreenPos.z, texture(shadowtex0, shadowScreenPos.xy).r);
+  vec3 shadow = getShadow(shadowScreenPos);
   vec3 lightVector = normalize(shadowLightPosition);
   vec3 worldLightVector = mat3(gbufferModelViewInverse) * lightVector;
   vec3 sunlight = sunlightColor * clamp(dot(worldLightVector, normal), 0.0, 1.0) * shadow;
