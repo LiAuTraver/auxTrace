@@ -1,3 +1,8 @@
+const int shadowMapResolution = 2048; // simple way to make shadow sharper, but can cause performance issues
+const bool shadowtex0Nearest = true;
+const bool shadowtex1Nearest = true;
+const bool shadowcolor0Nearest = true;
+
 vec3 distortShadowClipPos(vec3 shadowClipPos){
   // Euclidean distance from the player in shadow clip space
   float distortionFactor = length(shadowClipPos.xy); 

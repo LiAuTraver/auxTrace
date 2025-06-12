@@ -67,7 +67,30 @@ vec3 getShadow(vec3 shadowScreenPos){
   */
   return shadowColor.rgb * (1.0 - shadowColor.a);
 }
+#define SHADOW_QUALITY 2
+#define SHADOW_SOFTNESS 1
+vec3 getSoftShadow(vec4 shadowClipPos){
+  const float range = SHADOW_SOFTNESS / 2.0; // how far away from the original position we take our samples from
+  const float increment = range / SHADOW_QUALITY; // distance between each sample
 
+  vec3 shadowAccum = vec3(0.0); // sum of all shadow samples
+  int samples = 0;
+
+  for(float x = -range; x <= range; x += increment){
+    for (float y = -range; y <= range; y+= increment){
+      vec2 offset = vec2(x, y) / shadowMapResolution; // we divide by the resolution so our offset is in terms of pixels
+      vec4 offsetShadowClipPos = shadowClipPos + vec4(offset, 0.0, 0.0); // add offset
+      offsetShadowClipPos.z -= 0.001; // apply bias
+      offsetShadowClipPos.xyz = distortShadowClipPos(offsetShadowClipPos.xyz); // apply distortion
+      vec3 shadowNDCPos = offsetShadowClipPos.xyz / offsetShadowClipPos.w; // convert to NDC space
+      vec3 shadowScreenPos = shadowNDCPos * 0.5 + 0.5; // convert to screen space
+      shadowAccum += getShadow(shadowScreenPos); // take shadow sample
+      samples++;
+    }
+  }
+
+  return shadowAccum / float(samples); // divide sum by count, getting average shadow
+}
 void main() {
 	color = texture(colortex0, texcoord);
   // gamma correction, revert it in `final.fsh/vsh`
@@ -93,13 +116,13 @@ void main() {
   vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
   // avoid `shadow acne` by `biasing` the shadow position,
   // see https://computergraphics.stackexchange.com/questions/2192/cause-of-shadow-acne/2193
-  shadowClipPos -= 0.001;
-  shadowClipPos.xyz = distortShadowClipPos(shadowClipPos.xyz); // distortion
-  vec3 shadowNDCPos = shadowClipPos.xyz / shadowClipPos.w;
-  vec3 shadowScreenPos = shadowNDCPos * 0.5 + 0.5;
+  // shadowClipPos -= 0.001;
+  // shadowClipPos.xyz = distortShadowClipPos(shadowClipPos.xyz); // distortion
+  // vec3 shadowNDCPos = shadowClipPos.xyz / shadowClipPos.w;
+  // vec3 shadowScreenPos = shadowNDCPos * 0.5 + 0.5;
   
   // float shadow = step(shadowScreenPos.z, texture(shadowtex0, shadowScreenPos.xy).r);
-  vec3 shadow = getShadow(shadowScreenPos);
+  vec3 shadow = getSoftShadow(shadowClipPos);
   vec3 lightVector = normalize(shadowLightPosition);
   vec3 worldLightVector = mat3(gbufferModelViewInverse) * lightVector;
   vec3 sunlight = sunlightColor * clamp(dot(worldLightVector, normal), 0.0, 1.0) * shadow;
