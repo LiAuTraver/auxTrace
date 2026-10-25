@@ -9,7 +9,6 @@
   ],
   "settings": {
     "animations.Command-Palette": "Slide",
-    "animations.Install-Method": "Apc Customize UI++",
     "animations.Auto-Install": true,
     "files.associations": {
       "new": "cpp",
